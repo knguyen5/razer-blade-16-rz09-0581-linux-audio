@@ -9,11 +9,12 @@ Repair and diagnostic tooling for the 2026 Razer Blade 16 model
 
 > [!WARNING]
 > This repair was developed and tested on **CachyOS** with
-> `linux-cachyos 7.1.6`. The Debian/Ubuntu, Fedora, and openSUSE paths are
-> best-effort package-manager adaptations and have not been tested on those
-> distributions. They may require a newer kernel, SOF firmware, or ALSA UCM
-> package than the distribution currently provides. Read the diagnostics and
-> backup instructions before applying the fix.
+> `linux-cachyos 7.1.6` and the separately documented
+> `linux-cachyos-lts 6.18.42-1` backport. The Debian/Ubuntu, Fedora, and
+> openSUSE paths are best-effort package-manager adaptations and have not been
+> tested on those distributions. They may require a newer kernel, SOF
+> firmware, or ALSA UCM package than the distribution currently provides.
+> Read the diagnostics and backup instructions before applying the fix.
 
 ## Symptoms
 
@@ -44,9 +45,10 @@ Two separate faults were observed:
    `codecs/rt721+rt1320/init.conf`. The RT1320 amplifier routing remained
    uninitialized, leaving the internal speakers silent.
 
-The verified system required Linux 7.1 for Panther Lake/SoundWire support. The
-tested CachyOS 6.18 LTS kernel did not provide the required working topology for
-this laptop.
+Linux 7.1 provides the required Panther Lake/SoundWire path directly. The
+stock CachyOS 6.18.42 LTS kernel does not, but an exact-version, reversible
+developer backport was also verified; see
+[`lts-backport/README.md`](lts-backport/README.md).
 
 ## Automated repair
 

@@ -1,3 +1,6 @@
 razer-audio-diagnostics*.log
 *.tar.zst
 *.tar.gz
+lts-backport/work/
+lts-backport/backup/
+lts-backport/patches/downloads/
