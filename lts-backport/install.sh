@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly KREL="6.18.42-1-cachyos-lts"
 readonly ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-readonly SOURCE_ROOT="${ROOT_DIR}/work/linux-cachyos/linux-cachyos-lts/src/cachyos-6.18.42-1"
+readonly KREL="${KREL_OVERRIDE:-$(pacman -Q linux-cachyos-lts | awk '{print $2 "-cachyos-lts"}')}"
+readonly PACKAGE_VERSION="${KREL%-cachyos-lts}"
+readonly WORK_BASE="${WORK_ROOT_OVERRIDE:-${ROOT_DIR}/work}"
+readonly SOURCE_ROOT="${WORK_BASE}/${KREL}/linux-cachyos/linux-cachyos-lts/src/cachyos-${PACKAGE_VERSION}"
 readonly OVERRIDE_DIR="/usr/lib/modules/${KREL}/updates/razer"
 readonly INITRAMFS="/boot/initramfs-linux-cachyos-lts.img"
-readonly BACKUP_DIR="${ROOT_DIR}/backup"
+readonly BACKUP_BASE="${BACKUP_ROOT_OVERRIDE:-${ROOT_DIR}/backup}"
+readonly BACKUP_DIR="${BACKUP_BASE}/${KREL}"
 readonly -a BUILT_MODULES=(
   "sound/soc/intel/common/snd-soc-acpi-intel-match.ko"
   "sound/soc/sdw_utils/snd-soc-sdw-utils.ko"

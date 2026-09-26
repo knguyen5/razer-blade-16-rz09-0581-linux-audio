@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+readonly CONFIG_FILE="/etc/razer-audio-lts-backport.conf"
+readonly STATE_DIR="/var/lib/razer-audio-lts-backport"
+readonly PACMAN_LOCK="/var/lib/pacman/db.lck"
+
+[[ $EUID -eq 0 ]] || exit 1
+[[ -r "$CONFIG_FILE" ]] || {
+  printf 'Missing configuration: %s\n' "$CONFIG_FILE" >&2
+  exit 1
+}
+# shellcheck source=/dev/null
+source "$CONFIG_FILE"
+
+[[ -n "${BUILD_USER:-}" && -n "${BUILD_HOME:-}" && -n "${TOOL_ROOT:-}" &&
+   -n "${WORK_ROOT:-}" && -n "${BACKUP_ROOT:-}" ]] || {
+  printf 'Incomplete configuration in %s\n' "$CONFIG_FILE" >&2
+  exit 1
+}
+
+install -d -m 755 "$STATE_DIR" /run/lock
+exec 9>/run/lock/razer-audio-lts-rebuild.lock
+flock -n 9 || {
+  printf 'Another Razer audio rebuild is already running.\n'
+  exit 0
+}
+
+for _ in {1..300}; do
+  [[ ! -e "$PACMAN_LOCK" ]] && break
+  sleep 2
+done
+[[ ! -e "$PACMAN_LOCK" ]] || {
+  printf 'Timed out waiting for pacman to finish.\n' >&2
+  exit 1
+}
+
+package_version="$(pacman -Q linux-cachyos-lts | awk '{print $2}')"
+krel="${package_version}-cachyos-lts"
+override="$(modinfo -k "$krel" -n snd_soc_acpi_intel_match 2>/dev/null || true)"
+if [[ -r "${STATE_DIR}/last-success" ]] &&
+   [[ "$(<"${STATE_DIR}/last-success")" == "$krel" ]] &&
+   [[ "$override" == */updates/razer/* ]]; then
+  printf 'Backport is already current for %s.\n' "$krel"
+  exit 0
+fi
+
+printf '%s\n' "$krel" >"${STATE_DIR}/pending"
+rm -f -- "${STATE_DIR}/failed"
+
+on_error() {
+  status=$?
+  {
+    printf 'kernel=%s\n' "$krel"
+    printf 'failed_at=%s\n' "$(date --iso-8601=seconds)"
+    printf 'exit_status=%s\n' "$status"
+  } >"${STATE_DIR}/failed"
+  printf 'Razer audio rebuild failed for %s. Check: journalctl -u razer-audio-lts-rebuild\n' \
+    "$krel" >&2
+  exit "$status"
+}
+trap on_error ERR
+
+runuser -u "$BUILD_USER" -- env \
+  HOME="$BUILD_HOME" \
+  KREL_OVERRIDE="$krel" \
+  WORK_ROOT_OVERRIDE="$WORK_ROOT" \
+  "${TOOL_ROOT}/build.sh"
+
+KREL_OVERRIDE="$krel" \
+WORK_ROOT_OVERRIDE="$WORK_ROOT" \
+BACKUP_ROOT_OVERRIDE="$BACKUP_ROOT" \
+  "${TOOL_ROOT}/install.sh"
+
+printf '%s\n' "$krel" >"${STATE_DIR}/last-success"
+rm -f -- "${STATE_DIR}/pending" "${STATE_DIR}/failed"
+for old_work in "${WORK_ROOT}"/*-cachyos-lts; do
+  [[ -e "$old_work" && "$old_work" != "${WORK_ROOT}/${krel}" ]] || continue
+  rm -rf -- "$old_work"
+done
+printf 'Razer audio backport rebuilt successfully for %s. Reboot when convenient.\n' "$krel"

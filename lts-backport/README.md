@@ -81,6 +81,41 @@ LTS initramfs, installs overrides under
 `/usr/lib/modules/6.18.42-1-cachyos-lts/updates/razer/`, runs `depmod`, and
 regenerates only the CachyOS LTS initramfs.
 
+## Automatic rebuild after updates
+
+Install the pacman hook and systemd one-shot service:
+
+```bash
+sudo ./setup-auto-rebuild.sh
+```
+
+When `linux-cachyos-lts` or `linux-cachyos-lts-headers` is installed or
+upgraded, the hook queues `razer-audio-lts-rebuild.service`. The service waits
+for pacman to release its database lock, builds as the repository owner, then
+installs and regenerates the initramfs as root. It does not reboot.
+
+Check the result before rebooting into an updated LTS kernel:
+
+```bash
+systemctl status razer-audio-lts-rebuild.service
+journalctl -u razer-audio-lts-rebuild.service
+cat /var/lib/razer-audio-lts-backport/last-success
+```
+
+The automation discovers the matching CachyOS packaging commit and verifies
+module vermagic. It intentionally supports only 6.18.x. A future LTS-series
+change, missing headers, patch conflict, or ABI mismatch fails the service
+instead of installing questionable modules. Failure details are recorded in
+`/var/lib/razer-audio-lts-backport/failed`.
+
+Remove only the automatic trigger with:
+
+```bash
+sudo ./remove-auto-rebuild.sh
+```
+
+This leaves currently installed module overrides untouched.
+
 ## Rollback
 
 ```bash
@@ -95,8 +130,7 @@ Kernel modules are tied to an exact kernel ABI. After every
 `linux-cachyos-lts` update:
 
 1. do not reuse these old module binaries;
-2. check whether the new kernel already logs successful function-topology
-   selection without overrides;
-3. if it does not, update the version guards and rebuild against the new
-   package and headers; and
-4. keep another bootable kernel available until audio is reverified.
+2. confirm the automatic service succeeded for the new release;
+3. keep another bootable kernel available until audio is reverified; and
+4. when CachyOS moves to a newer LTS series, test the stock kernel first rather
+   than extending this backport automatically.

@@ -1,0 +1,12 @@
+[Unit]
+Description=Rebuild Razer Blade SoundWire modules for CachyOS LTS
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=/etc/razer-audio-lts-backport.conf
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/razer-audio-lts-rebuild
+TimeoutStartSec=45min
+Nice=10
+IOSchedulingClass=idle

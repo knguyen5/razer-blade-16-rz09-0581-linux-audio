@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly KREL="6.18.42-1-cachyos-lts"
+readonly KREL="${KREL_OVERRIDE:-$(pacman -Q linux-cachyos-lts | awk '{print $2 "-cachyos-lts"}')}"
 readonly OVERRIDE_DIR="/usr/lib/modules/${KREL}/updates/razer"
 
 [[ $EUID -eq 0 ]] || {

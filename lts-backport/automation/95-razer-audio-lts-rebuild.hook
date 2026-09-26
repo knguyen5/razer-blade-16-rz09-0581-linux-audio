@@ -1,0 +1,11 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = linux-cachyos-lts
+Target = linux-cachyos-lts-headers
+
+[Action]
+Description = Queueing Razer SoundWire module rebuild...
+When = PostTransaction
+Exec = /usr/bin/systemctl start --no-block razer-audio-lts-rebuild.service
